@@ -20,6 +20,7 @@ import com.amazonaws.samples.kaja.taxi.consumer.events.EventDeserializationSchem
 import com.amazonaws.samples.kaja.taxi.consumer.events.TimestampAssigner;
 import com.amazonaws.samples.kaja.taxi.consumer.events.es.AverageTripDuration;
 import com.amazonaws.samples.kaja.taxi.consumer.events.es.PickupCount;
+import com.amazonaws.samples.kaja.taxi.consumer.events.es.TripRecord;
 import com.amazonaws.samples.kaja.taxi.consumer.events.kinesis.Event;
 import com.amazonaws.samples.kaja.taxi.consumer.events.kinesis.TripEvent;
 import com.amazonaws.samples.kaja.taxi.consumer.operators.*;
@@ -124,6 +125,10 @@ public class ProcessTaxiStream {
         .keyBy("pickupGeoHash", "airportCode")
         .timeWindow(Time.hours(1))
         .apply(new TripDurationToAverageTripDuration());
+        
+        
+    DataStream<TripRecord> tripRecords = trips
+        .flatMap(new TripToTripRecord());
 
 
     if (parameter.has("ElasticsearchEndpoint")) {
@@ -137,6 +142,7 @@ public class ProcessTaxiStream {
 
       pickupCounts.addSink(AmazonElasticsearchSink.buildElasticsearchSink(elasticsearchEndpoint, region, "pickup_count", "pickup_count"));
       tripDurations.addSink(AmazonElasticsearchSink.buildElasticsearchSink(elasticsearchEndpoint, region, "trip_duration", "trip_duration"));
+      tripRecords.addSink(AmazonElasticsearchSink.buildElasticsearchSink(elasticsearchEndpoint, region, "trip_record", "trip_record"));
     }
 
 
