@@ -114,16 +114,16 @@ public class ProcessTaxiStream {
         //compute geo hash for every event
         .map(new TripToGeoHash())
         .keyBy("geoHash")
-        //collect all events in a one hour window
-        .timeWindow(Time.hours(1))
-        //count events per geo hash in the one hour window
+        //collect all events in a one minute window
+        .timeWindow(Time.minutes(1))
+        //count events per geo hash in the one minute window
         .apply(new CountByGeoHash());
 
 
     DataStream<AverageTripDuration> tripDurations = trips
         .flatMap(new TripToTripDuration())
         .keyBy("pickupGeoHash", "airportCode")
-        .timeWindow(Time.hours(1))
+        .timeWindow(Time.minutes(1))
         .apply(new TripDurationToAverageTripDuration());
         
         
