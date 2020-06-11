@@ -41,29 +41,12 @@ import org.apache.flink.streaming.connectors.kinesis.config.ConsumerConfigConsta
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.flink.api.common.functions.FlatMapFunction;
-import org.apache.flink.api.common.serialization.SimpleStringSchema;
-import org.apache.flink.api.java.tuple.Tuple2;
-import org.apache.flink.api.common.serialization.SimpleStringEncoder;
-import org.apache.flink.core.fs.Path;
-import org.apache.flink.streaming.api.functions.sink.filesystem.StreamingFileSink;
-import org.apache.flink.util.Collector;
-
 
 public class ProcessTaxiStream {
   private static final Logger LOG = LoggerFactory.getLogger(ProcessTaxiStream.class);
 
   private static final String DEFAULT_STREAM_NAME = "streaming-analytics-workshop";
   private static final String DEFAULT_REGION_NAME = Regions.getCurrentRegion()==null ? "eu-west-1" : Regions.getCurrentRegion().getName();
-  private static final String s3SinkPath = "s3a://paul-open-data/aggregate";
-  
-  private static StreamingFileSink<String> createS3SinkFromStaticConfig() {
-
-    final StreamingFileSink<String> sink = StreamingFileSink
-            .forRowFormat(new Path(s3SinkPath), new SimpleStringEncoder<String>("UTF-8"))
-            .build();
-    return sink;
-  }
 
 
   public static void main(String[] args) throws Exception {
@@ -142,16 +125,6 @@ public class ProcessTaxiStream {
         .keyBy("pickupGeoHash", "airportCode")
         .timeWindow(Time.minutes(10))
         .apply(new TripDurationToAverageTripDuration());
-        
-        
-    DataStream<PickupCount> s3Count = trips
-        //compute geo hash for every event
-        .map(new TripToGeoHash())
-        .keyBy("geoHash")
-        //collect all events in a one minute window
-        .timeWindow(Time.minutes(10))
-        //count events per geo hash in the one minute window
-        .apply(new CountByGeoHash());
 
 
     if (parameter.has("ElasticsearchEndpoint")) {
@@ -165,7 +138,6 @@ public class ProcessTaxiStream {
 
       pickupCounts.addSink(AmazonElasticsearchSink.buildElasticsearchSink(elasticsearchEndpoint, region, "pickup_count", "pickup_count"));
       tripDurations.addSink(AmazonElasticsearchSink.buildElasticsearchSink(elasticsearchEndpoint, region, "trip_duration", "trip_duration"));
-      s3Count.addSink(createS3SinkFromStaticConfig());
     }
 
 
